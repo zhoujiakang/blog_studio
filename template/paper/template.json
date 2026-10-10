@@ -1,0 +1,60 @@
+{
+  "formatVersion": 1,
+  "id": "paper",
+  "name": "纸页",
+  "minAppVersion": "0.0.1",
+  "version": "1.0.0",
+  "description": "留白优先的单色系极简博客：顶部导航、双栏卡片首页与窄栏正文。",
+  "author": "拾笺模板仓库",
+  "fields": [
+    {
+      "key": "backgroundTint",
+      "label": "纸张底色",
+      "type": "color",
+      "description": "整页背景色。建议使用低饱和浅色，与正文墨色形成对比。",
+      "default": "#FAF9F7",
+      "value": "#FAF9F7"
+    },
+    {
+      "key": "accentColor",
+      "label": "强调色",
+      "type": "color",
+      "description": "链接、悬停、引用块竖线与小标记使用的颜色。",
+      "default": "#1A1A1A",
+      "value": "#1A1A1A"
+    },
+    {
+      "key": "backgroundImage",
+      "label": "背景纹理",
+      "type": "image",
+      "description": "平铺的背景纹理。留空时使用模板自带的纸纹。",
+      "default": "",
+      "value": ""
+    },
+    {
+      "key": "announcement",
+      "label": "公告",
+      "type": "text",
+      "multiline": true,
+      "description": "显示在首页顶部的公告，不使用 Markdown。留空则不显示该区域。",
+      "default": "",
+      "value": ""
+    },
+    {
+      "key": "footerText",
+      "label": "页脚文字",
+      "type": "text",
+      "multiline": true,
+      "description": "显示在页脚右侧的署名或说明。留空则只显示站点署名。",
+      "default": "",
+      "value": ""
+    }
+  ],
+  "site": {
+    "title": "我的博客",
+    "subtitle": "记录日常与思考",
+    "author": "作者",
+    "description": "欢迎来到我的文字空间。",
+    "avatar": ""
+  }
+}

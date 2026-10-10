@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+
+.blog-studio-trash/
+source/**/*.tmp-*
+.blog-studio/
+.studio-install-*/
+*.studio-*.tmp
+.env
+.env.*
+!.env.example

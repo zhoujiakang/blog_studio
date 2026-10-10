@@ -1,0 +1,32 @@
+{
+  "name": "vue-butterfly-blog",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.mjs && vitest run"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.16",
+    "gray-matter": "^4.0.3",
+    "marked": "^18.1.0",
+    "vue": "^3.5.43",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^29.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3",
+    "vue-tsc": "^3.3.12"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

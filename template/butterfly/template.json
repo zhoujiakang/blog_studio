@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "id": "butterfly",
+  "name": "拾笺 · Butterfly",
+  "fields": [
+    {
+      "key": "backgroundImage",
+      "label": "背景图片",
+      "type": "image",
+      "description": "首页背景，可选择公共图片替换模板自带的背景。",
+      "default": "",
+      "value": ""
+    },
+    {
+      "key": "themeColor",
+      "label": "主题颜色",
+      "type": "color",
+      "default": "#87968B",
+      "value": "#87968B"
+    },
+    {
+      "key": "announcement",
+      "label": "公告",
+      "type": "text",
+      "multiline": true,
+      "default": "欢迎来到拾笺。拾起日常的小事，慢慢写成自己的故事。",
+      "value": "欢迎来到拾笺。拾起日常的小事，慢慢写成自己的故事。"
+    }
+  ],
+  "site": {
+    "title": "拾笺 InkJian",
+    "subtitle": "拾起日常，落墨成笺。",
+    "description": "用文字收藏日常，在自己的空间里记录、写作与分享。",
+    "author": "拾笺",
+    "avatar": ""
+  },
+  "minAppVersion": "0.0.1"
+}

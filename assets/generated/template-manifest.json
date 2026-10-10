@@ -1,0 +1,301 @@
+{
+  "version": "2",
+  "templates": [
+    {
+      "id": "butterfly",
+      "name": "拾笺 · Butterfly",
+      "protocolVersion": 2,
+      "minAppVersion": "0.0.1",
+      "files": [
+        {
+          "path": ".gitignore",
+          "length": 143,
+          "hash": "9867c5533285f1f040fcb67351804ecc34ae3668a5e46234f55eb14733d7661a"
+        },
+        {
+          "path": "README.md",
+          "length": 3008,
+          "hash": "b163a7a6991bdfc25e2163f6dcafe55f140ac2784466aa11050cb94a5a1317cc"
+        },
+        {
+          "path": "index.html",
+          "length": 409,
+          "hash": "c0e11999926baee26632f6557a517709bbeb8cdcc831a98545c6cb71d71c309c"
+        },
+        {
+          "path": "package-lock.json",
+          "length": 82375,
+          "hash": "b460e42e2ec67c33dcaea68f85e8c3e5110079631d8d6d8ad0d42b7b78199180"
+        },
+        {
+          "path": "package.json",
+          "length": 748,
+          "hash": "a5a19f01e55228cd2bc4aa0fef9baa5086706224118cc89e43eafa4681848b43"
+        },
+        {
+          "path": "scripts/content.mjs",
+          "length": 6177,
+          "hash": "034a36ce102ae26aef36923dacb726d9183dd5ade7610e1f3943bde0c05feb1f"
+        },
+        {
+          "path": "scripts/public-images.mjs",
+          "length": 1664,
+          "hash": "ce83c46fb9397cebd3f596a77c6972e275c250d5521bd4dfd9b781c22e5aae10"
+        },
+        {
+          "path": "src/App.vue",
+          "length": 21719,
+          "hash": "2d2afebc04531415719232205501c6a8f39a6d89959ba96e9b16d09689159afb"
+        },
+        {
+          "path": "src/assets/cover.svg",
+          "length": 715,
+          "hash": "ae551caf73b056d8cea6b39cacc4ab4cef9df881d45fac4228edf2951832560a"
+        },
+        {
+          "path": "src/components/Icon.vue",
+          "length": 1893,
+          "hash": "a6bba1d1db38d4a0c93fcdb60b9d60f69107b2234ca2a3c5aed25f4815825801"
+        },
+        {
+          "path": "src/env.d.ts",
+          "length": 158,
+          "hash": "f719dafc3d3ac336b1e07a0f6ddb15f1725696dc27ba8986a0f820ebdf5ade42"
+        },
+        {
+          "path": "src/lib/markdown.ts",
+          "length": 1109,
+          "hash": "ace2f7f5de154ae0bef68cb4def750568a8d54edd203e190583ac8f6bd32c49a"
+        },
+        {
+          "path": "src/lib/types.ts",
+          "length": 423,
+          "hash": "4ba71b9f9280b87c9699f3aea71189bdc6abe33812ad656066266f72b85a2a82"
+        },
+        {
+          "path": "src/main.ts",
+          "length": 114,
+          "hash": "4f28b634f509f112d7c3fa22fd11a5611bd9b47ebc0553b770a468d09952bfd6"
+        },
+        {
+          "path": "src/style.css",
+          "length": 18459,
+          "hash": "62834d0964719819a64044208939c8ac6e1cab03b131ea7874471f37e42f74db"
+        },
+        {
+          "path": "template.json",
+          "length": 1038,
+          "hash": "b5888df83ddd04c6bb8f373ae5bc31aacc86fa1d0c51f3a0d83adba4b0dd9c15"
+        },
+        {
+          "path": "tests/app.test.ts",
+          "length": 4145,
+          "hash": "2cd9d53b876be319b43219a2ba21244b04996d292280c7dc7fbdbf9a85708a68"
+        },
+        {
+          "path": "tests/content.test.mjs",
+          "length": 7416,
+          "hash": "2e4000493f45a88f5c0964118db4fde70d6026b6a8f6c57d9415d0c0e967e933"
+        },
+        {
+          "path": "tests/public-images.test.mjs",
+          "length": 1374,
+          "hash": "428d2e38db8f97b219c55d3978c338ab390480145c079020c9c283ac1a1f699d"
+        },
+        {
+          "path": "tsconfig.json",
+          "length": 356,
+          "hash": "051b18cf41a68828e661e36f1c385132d97725a4f712716d4a3d8b7d229ce1a0"
+        },
+        {
+          "path": "vite.config.ts",
+          "length": 4391,
+          "hash": "5691d606eb74a456142d3e0519d517d1b206ae5f47df6fc0a92e30a880fca8de"
+        },
+        {
+          "path": "vitest.config.ts",
+          "length": 1587,
+          "hash": "bba61e9f0b171e874a442e9ffc0bcf56150bba8f8998ccd6981edffd1999c01a"
+        }
+      ]
+    },
+    {
+      "id": "paper",
+      "name": "纸页",
+      "protocolVersion": 2,
+      "minAppVersion": "0.0.1",
+      "files": [
+        {
+          "path": ".gitignore",
+          "length": 43,
+          "hash": "175ffb95b154e70a37d8d7d12b0d2b6cd0cf34d3b2834e0c0a7f77660a945885"
+        },
+        {
+          "path": "README.md",
+          "length": 4580,
+          "hash": "51ccbd7ee9870f7cb747f26087bff0791dbb40530b718fea9d5908246c7b5ef3"
+        },
+        {
+          "path": "index.html",
+          "length": 420,
+          "hash": "ba397d7811cbb8aa757b907bdf7754a67f51054f4860769809a0ca9b56340e04"
+        },
+        {
+          "path": "package-lock.json",
+          "length": 40141,
+          "hash": "8392acbb43cf6318746753cd90a983b2fe4c249a81b643e491081cef1f320965"
+        },
+        {
+          "path": "package.json",
+          "length": 599,
+          "hash": "693c0380f9f8d80ddd9778c9723fab932fba24e3ab686b6a94f5bcca1bd8d413"
+        },
+        {
+          "path": "scripts/content.d.mts",
+          "length": 1045,
+          "hash": "48e5c77fd91416dc784cce9bbbc8688388b71ba834fe5372ec9ad3a5a9117640"
+        },
+        {
+          "path": "scripts/content.mjs",
+          "length": 16400,
+          "hash": "aa510b0b40f5d844e18e6cd8df399067f10605486b99f0574340de612155bd34"
+        },
+        {
+          "path": "scripts/public-images.d.mts",
+          "length": 242,
+          "hash": "1ad4a0d175ee47911dde482b5b36658d95db91f97ba6ed301db06670cb9247f5"
+        },
+        {
+          "path": "scripts/public-images.mjs",
+          "length": 3976,
+          "hash": "84bd09dd1070732a3d5869558b2446ff84a48ab8dd1b9f998bfa7104e79c5070"
+        },
+        {
+          "path": "src/App.vue",
+          "length": 3045,
+          "hash": "64d298feaffa27bf4543b65bf7288ff7e354bdc7c3a758b0f356cfeb970dab29"
+        },
+        {
+          "path": "src/assets/paper-grain.svg",
+          "length": 419,
+          "hash": "1a8cfdf366cf397cab3387cc5d7bfb59bdb5b2255b1b2154068579500dc22ce2"
+        },
+        {
+          "path": "src/components/PostCard.vue",
+          "length": 1250,
+          "hash": "dd20f841a048244b6c80474cc0605f74d2db9b9fb1b1bc020a88ad4f480fb500"
+        },
+        {
+          "path": "src/components/SafeImage.vue",
+          "length": 635,
+          "hash": "07ed0a7a6251514d7267bf99b82c0e7a2bc08b9c32d15dde1d98b9b7eea8db2d"
+        },
+        {
+          "path": "src/components/SiteFooter.vue",
+          "length": 396,
+          "hash": "13c371ea4301907c876dc435538d8df51e058de28a94d8dfa4b4261b339acf27"
+        },
+        {
+          "path": "src/components/SiteHeader.vue",
+          "length": 1302,
+          "hash": "97da1456f1c609f5288c62585bd2cc250c386d1230de153153c8faef0e9d634d"
+        },
+        {
+          "path": "src/env.d.ts",
+          "length": 341,
+          "hash": "f9cf4ba382341c14b42c5d94c2639ca71d69b2ffe4052e302dff517e2ad9e3f4"
+        },
+        {
+          "path": "src/lib/content-utils.ts",
+          "length": 3189,
+          "hash": "010bf6e968366d34e213258fc23ffc7239ed125f2a8d16171580679a89a594fe"
+        },
+        {
+          "path": "src/lib/content.ts",
+          "length": 328,
+          "hash": "c3d4212b01ed048fccf055ccdae7997b4f9749d363463fc15f3295147bcbe61b"
+        },
+        {
+          "path": "src/lib/markdown.ts",
+          "length": 2972,
+          "hash": "363f6dd48062f721eae17ef9b17d38bcfbf5be8222047106dab39682b54c30ec"
+        },
+        {
+          "path": "src/lib/router.ts",
+          "length": 2615,
+          "hash": "8dd22dc09f15ee9666c7b314974ad2f81f9c713ce91b5d3d592e59bbb69be99b"
+        },
+        {
+          "path": "src/lib/theme.ts",
+          "length": 2246,
+          "hash": "b0d25d97034dca00ffc18b74c39a601407437bd61d79e8b1098ea1fd21c9a79b"
+        },
+        {
+          "path": "src/lib/types.ts",
+          "length": 827,
+          "hash": "4ef98c11012c17e419928e33d44c725b01e154c17e07f289b7ae5b1e1afab018"
+        },
+        {
+          "path": "src/main.ts",
+          "length": 116,
+          "hash": "0394f20ab9316f18d81fa08c751815db63175728a67be73b3a0a5e786127f821"
+        },
+        {
+          "path": "src/style.css",
+          "length": 12422,
+          "hash": "89e154b0f01c718513ecd269a1394752a58d566ecefc3fa6fb2c63a21295b8d6"
+        },
+        {
+          "path": "src/views/AboutView.vue",
+          "length": 709,
+          "hash": "601fc1cdbe022b5ff4500270514ddcde388d87c51309334274a4c38abb8a8210"
+        },
+        {
+          "path": "src/views/ArchiveView.vue",
+          "length": 1552,
+          "hash": "4c007ea8994009e658616d050f4c51b22088bb3e6867ff83285c1500dbce6feb"
+        },
+        {
+          "path": "src/views/HomeView.vue",
+          "length": 1261,
+          "hash": "186062bb72c32c2baec2b412310f2e52107bc9bc6573f9a63ae69dbf9331a8fb"
+        },
+        {
+          "path": "src/views/NotFoundView.vue",
+          "length": 394,
+          "hash": "e320276fa87b1ca27ef80c1a1fa2408ae28dfd6a2e1aa5f04efc5383ad780093"
+        },
+        {
+          "path": "src/views/PostView.vue",
+          "length": 3559,
+          "hash": "d80e6fac216d75b19ad397de422e31377ebdac2eaef0cd0ba369b2d51fc2edca"
+        },
+        {
+          "path": "src/views/TaxonomyItemView.vue",
+          "length": 1014,
+          "hash": "4e59f0fa1b1e538cd74620a654772aaa9b62fdb13885048e1f06a98a2a2459d1"
+        },
+        {
+          "path": "src/views/TaxonomyView.vue",
+          "length": 2469,
+          "hash": "bcdd59248790d2cfab8dcbcfb3dd9533c4636cce96928f83374f0bd9b7e5d2f5"
+        },
+        {
+          "path": "template.json",
+          "length": 1691,
+          "hash": "aeabc6f44cace1f824d3f0eb50516fe86a8eca9493d8c8f843ed9a9b40320ec7"
+        },
+        {
+          "path": "tsconfig.json",
+          "length": 604,
+          "hash": "f17ae240016c585359228992fe4ff1976dbf1005bd25e74b4cf4fbe44efe3dba"
+        },
+        {
+          "path": "vite.config.ts",
+          "length": 7268,
+          "hash": "6d45d1bbd6bbb5c3ab18e078953a0c7634691d3858dd024f9935c31c6a8549d3"
+        }
+      ]
+    }
+  ]
+}
