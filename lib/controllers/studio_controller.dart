@@ -154,7 +154,7 @@ class StudioController extends ChangeNotifier {
   }
 
   Future<void> reloadDocument() async {
-    if (await _confirm('重新加载', '将丢弃当前未保存的修改，读取磁盘版本。', '重新加载')) {
+    if (await _confirm('重新加载', '读取磁盘上的最新版本。未保存的修改会保留在本地备份中。', '重新加载')) {
       try {
         await session.reload();
       } catch (e) {
@@ -367,7 +367,7 @@ class StudioController extends ChangeNotifier {
     } on PreviewPreparationCancelled {
       // Cancellation is a normal result, not an error for the user.
     } catch (_) {
-      _message('暂时无法打开预览，请检查网络后重试。');
+      _message(preview.preparationFailureMessage ?? '暂时无法打开本地预览，请重新尝试。');
     } finally {
       if (mounted) update(() => preparingPreview = false);
     }
@@ -414,11 +414,16 @@ class StudioController extends ChangeNotifier {
     closing = true;
     try {
       if (!await session.flush()) {
+        await session.preservePendingEdits();
         if (!mounted ||
             !await _confirm(
               '尚未保存',
-              '${session.error}\n\n关闭将丢弃当前未保存的修改。',
-              '丢弃并关闭',
+              session.recoveryError != null
+                  ? '${session.error}\n\n本地备份也未能写入，请先复制正文。关闭可能丢失未保存的内容。'
+                  : session.articleDirty
+                  ? '${session.error}\n\n未保存的文字会保留在本地备份中，下次打开博客会自动恢复。'
+                  : '${session.error}\n\n当前配置未保存，关闭后需要重新修改。',
+              '关闭',
             )) {
           return;
         }

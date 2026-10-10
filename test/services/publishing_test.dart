@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -466,6 +467,55 @@ void main() {
       expect(controller.state!.pending, false);
       expect(controller.state!.publishedAt, isNotNull);
       expect(controller.message, '博客已上线。');
+      expect(builder.builds, 1);
+      expect(pages.uploads, 1);
+    } finally {
+      controller.dispose();
+      builder.environment.dispose();
+      await root.delete(recursive: true);
+    }
+  });
+  test('pausing deployment interrupts polling and retry confirms without uploading again', () async {
+    final root = await Directory.systemTemp.createTemp('publishing-cancel-');
+    final builder = FakeBuilder();
+    final auth = await authorized();
+    final pages = FakePages(auth);
+    final controller = PublishController(
+      auth: auth,
+      builder: builder,
+      browser: Browser(),
+      github: pages,
+      pollInterval: const Duration(minutes: 1),
+    );
+    try {
+      await File('${root.path}/blog.json').writeAsString(
+        jsonEncode({
+          'formatVersion': 2,
+          'activeTemplate': 'butterfly',
+          'site': {},
+        }),
+      );
+      await controller.open(
+        ProjectSession(root: root.path),
+        FileStore(PathGuard(root.path)),
+      );
+      await controller.selectRepository(PublishTarget('alice', 'blog'));
+      final waiting = Completer<void>();
+      controller.addListener(() {
+        if (controller.step == 3 && !waiting.isCompleted) waiting.complete();
+      });
+      final publishing = controller.publish();
+      await waiting.future;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await controller.cancel();
+      await publishing.timeout(const Duration(seconds: 2));
+      expect(controller.state!.pending, true);
+      expect(controller.message, contains('已暂停'));
+      expect(controller.busy, false);
+      pages.built = true;
+      await controller.publish();
+      expect(controller.step, 4);
+      expect(controller.state!.pending, false);
       expect(builder.builds, 1);
       expect(pages.uploads, 1);
     } finally {

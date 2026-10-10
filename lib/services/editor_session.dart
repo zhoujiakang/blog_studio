@@ -1,3 +1,8 @@
+import 'dart:io';
+import 'dart:convert';
+
+import 'package:blog_studio/storage/file_store.dart';
+import 'package:blog_studio/storage/recovery_store.dart';
 import 'package:blog_studio/services/general_configuration_session.dart';
 import 'package:blog_studio/storage/blog_configuration.dart';
 import 'package:blog_studio/models/document_editor.dart';
@@ -54,7 +59,163 @@ class EditorSession extends ChangeNotifier {
   SaveStatus status = SaveStatus.clean;
   String? error;
   bool busy = false, importing = false, _loading = false;
-  Timer? _timer;
+  Timer? _timer, _externalTimer;
+  Future<void> _journal = Future.value();
+  bool externalChange = false, _checkingExternal = false;
+  List<RecoveryRecord> _recoveries = [];
+  bool recovered = false;
+  String? recoveryError;
+  DateTime? lastSavedAt;
+  Future<void> _refreshRecoveries() async {
+    try {
+      final recovery = RecoveryStore(repository!.store);
+      _recoveries = await recovery.list();
+      recoveryError = recovery.errors.isEmpty ? null : '部分未保存内容无法读取，本地备份已保留。';
+    } catch (e) {
+      recoveryError = '无法读取上次未保存的内容，本地备份已保留：$e';
+    }
+    _notify();
+  }
+
+  void _checkpoint() {
+    if (article == null || repository == null) return;
+    final store = RecoveryStore(repository!.store);
+    final record = RecoveryRecord(
+      article!,
+      body,
+      Map.from(attributes),
+      DateTime.now(),
+    );
+    _journal = _journal.then((_) => store.checkpoint(record)).catchError((
+      Object e,
+    ) {
+      recoveryError = '本地备份写入失败，请尽快保存或复制正文。';
+      _notify();
+    });
+  }
+
+  Future<void> checkExternalChanges() async {
+    if (_disposed ||
+        _checkingExternal ||
+        busy ||
+        _loading ||
+        _saving != null ||
+        article == null) {
+      return;
+    }
+    _checkingExternal = true;
+    final original = article!;
+    final repo = repository!;
+    try {
+      final file = File(await repo.store.guard.resolve(original.relativePath));
+      final changed =
+          !await file.exists() ||
+          contentHash(await file.readAsBytes()) != original.contentHash;
+      if (!_disposed &&
+          identical(article, original) &&
+          changed &&
+          !externalChange) {
+        externalChange = true;
+        status = SaveStatus.conflict;
+        error = '文件已在外部修改或删除。当前内容不会覆盖磁盘版本，可另存副本或重新加载。';
+        if (articleDirty) _checkpoint();
+        _notify();
+      }
+    } catch (e) {
+      if (!_disposed && identical(article, original)) {
+        error = '暂时无法检查磁盘文件：$e';
+        _notify();
+      }
+    } finally {
+      _checkingExternal = false;
+    }
+  }
+
+  Future<void> preservePendingEdits() async {
+    if (articleDirty) _checkpoint();
+    await _journal;
+  }
+
+  Future<bool> _restorePending(RecoveryRecord record) async {
+    final file = File(await repository!.store.guard.resolve(record.path));
+    final exists = await file.exists();
+    final changed =
+        !exists ||
+        contentHash(await file.readAsBytes()) != record.original.contentHash;
+    if (exists && changed) {
+      final current = await repository!.read(record.path);
+      final sameAttributes =
+          current.frontMatter.length == record.attributes.length &&
+          record.attributes.entries.every(
+            (entry) =>
+                jsonEncode(current.frontMatter[entry.key]) ==
+                jsonEncode(entry.value),
+          );
+      if (current.bodySource.trimRight() == record.body.trimRight() &&
+          sameAttributes) {
+        await RecoveryStore(repository!.store)
+            .clear(record.path, record.body, record.attributes);
+        _recoveries.removeWhere((item) => item.path == record.path);
+        return false;
+      }
+    }
+    await _load(record.original);
+    body = record.body;
+    attributes = Map.from(record.attributes);
+    revision = 1;
+    recovered = true;
+    await editor.open(
+      body,
+      images: await ImageImporter(repository!.store).resolveImages(body),
+    );
+    externalChange = changed;
+    status = changed ? SaveStatus.conflict : SaveStatus.dirty;
+    if (changed) {
+      error = '已恢复上次未保存的内容，但磁盘文件已修改或删除。可另存副本或重新加载，避免覆盖。';
+    }
+    _notify();
+    return true;
+  }
+
+  Future<void> _openDocument(String path) async {
+    await _refreshRecoveries();
+    for (final record in List<RecoveryRecord>.from(_recoveries)) {
+      if (record.path == path && await _restorePending(record)) return;
+    }
+    await _load(await repository!.read(path));
+  }
+
+  Future<bool> saveCopy() async {
+    if (article == null || busy || importing || editor.composing) return false;
+    busy = true;
+    _timer?.cancel();
+    _notify();
+    try {
+      await _journal;
+      final original = article!;
+      final name = attributes['title']?.toString() ?? original.title;
+      var copy = original.note
+          ? await repository!.createNote()
+          : await repository!.create('$name（恢复副本）');
+      copy = await repository!.save(copy, body, {
+        ...attributes,
+        if (!original.note) 'title': '$name（恢复副本）',
+      });
+      await RecoveryStore(repository!.store)
+          .clear(original.relativePath, body, attributes);
+      await _load(copy);
+      await _refreshRecoveries();
+      return true;
+    } catch (e) {
+      error = '另存失败，当前内容和本地备份已保留：$e';
+      _notify();
+      return false;
+    } finally {
+      busy = false;
+      _notify();
+    }
+  }
+
   Future<bool>? _saving;
   bool _disposed = false;
   bool get articleDirty => revision != savedRevision;
@@ -75,8 +236,9 @@ class EditorSession extends ChangeNotifier {
 
   void _markDirty() {
     revision++;
-    error = null;
-    status = SaveStatus.dirty;
+    _checkpoint();
+    if (!externalChange) error = null;
+    status = externalChange ? SaveStatus.conflict : SaveStatus.dirty;
     _timer?.cancel();
     _timer = Timer(const Duration(milliseconds: 700), () => unawaited(flush()));
     _notify();
@@ -100,6 +262,8 @@ class EditorSession extends ChangeNotifier {
   }
 
   Future<bool> _saveLoop() async {
+    await _journal;
+    if (externalChange && article != null) return false;
     while (articleDirty && article != null) {
       if (editor.composing) {
         error = '请先完成输入法选字，再保存或切换文章。';
@@ -121,6 +285,14 @@ class EditorSession extends ChangeNotifier {
         );
         library.update(article!);
         savedRevision = version;
+        lastSavedAt = DateTime.now();
+        recovered = false;
+        await _journal;
+        await RecoveryStore(repository!.store)
+            .clear(original.relativePath, capturedBody, capturedAttributes);
+        _recoveries.removeWhere(
+          (r) => r.path == original.relativePath && !articleDirty,
+        );
       } catch (e) {
         error = '$e';
         status = e is StudioException && e.code == StudioError.fileConflict
@@ -210,6 +382,16 @@ class EditorSession extends ChangeNotifier {
     attributes = {};
     body = '';
     revision = savedRevision = 0;
+    externalChange = false;
+    _externalTimer?.cancel();
+    _externalTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => unawaited(checkExternalChanges()),
+    );
+    await _refreshRecoveries();
+    for (final record in List<RecoveryRecord>.from(_recoveries)) {
+      if (await _restorePending(record)) break;
+    }
   });
   Future<void> _load(ArticleSnapshot next) async {
     final images = await ImageImporter(repository!.store)
@@ -222,6 +404,9 @@ class EditorSession extends ChangeNotifier {
       attributes = Map.from(next.frontMatter);
       revision = savedRevision = 0;
       status = SaveStatus.clean;
+      recovered = false;
+      lastSavedAt = null;
+      externalChange = false;
       error = null;
       await editor.open(body, images: images);
     } finally {
@@ -231,9 +416,11 @@ class EditorSession extends ChangeNotifier {
   }
 
   Future<bool> openArticle(String path) =>
-      _operation(() async => _load(await repository!.read(path)));
-  Future<bool> openAbout() =>
-      _operation(() async => _load(await repository!.openAbout()));
+      _operation(() => _openDocument(path));
+  Future<bool> openAbout() => _operation(() async {
+    await repository!.openAbout();
+    await _openDocument('resource/about.md');
+  });
 
   void updateGeneralConfiguration(String key, String value) {
     if (generalConfiguration == null || busy) return;
@@ -406,7 +593,9 @@ class EditorSession extends ChangeNotifier {
     if (busy || importing || article == null) return;
     _timer?.cancel();
     if (_saving != null) await _saving;
+    await _journal;
     await _load(await repository!.read(article!.relativePath));
+    await _refreshRecoveries();
   }
 
   Future<void> insertImage(ImageInput input) async {
@@ -456,6 +645,7 @@ class EditorSession extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _timer?.cancel();
+    _externalTimer?.cancel();
     editor.removeListener(_editorChanged);
     editor.dispose();
     super.dispose();

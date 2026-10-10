@@ -33,6 +33,10 @@ class PublishController extends ChangeNotifier {
   List<GitHubRepository> repositories = [];
   DeviceAuthorization? authorization;
   bool busy = false, publishing = false, _cancelled = false, _disposed = false;
+  int step = 0;
+  DateTime? startedAt;
+  bool cancelling = false;
+  Completer<void>? _pollWait;
   String message = '', error = '';
   bool get configured => auth.settings.configured;
   PublishTarget? get target => state?.target;
@@ -51,7 +55,16 @@ class PublishController extends ChangeNotifier {
 
   void _failure(Object e) {
     message = state?.pending == true ? '网页已上传，上线确认未完成。' : '操作未完成。';
-    error = e is PublishingException ? e.message : '暂时无法完成操作，请检查网络或博客配置后重试。';
+    error = e is PublishingException
+        ? e.message
+        : switch (step) {
+            1 =>
+              builder.environment.preparationFailureMessage ??
+                  '网页准备或构建失败，请检查模板后重试。',
+            2 => '网页上传未完成，请稍后重试。',
+            3 => '上线确认未完成，可以稍后继续确认，无需重新上传。',
+            _ => '发布仓库检查失败，请刷新授权后重试。',
+          };
     _notify();
   }
 
@@ -87,7 +100,7 @@ class PublishController extends ChangeNotifier {
   Future<void> connect() async {
     if (busy) return;
     busy = true;
-    _cancelled = false;
+    _cancelled = cancelling = false;
     error = '';
     _progress('正在连接 GitHub…');
     try {
@@ -108,7 +121,7 @@ class PublishController extends ChangeNotifier {
       _failure(e);
     } finally {
       authorization = null;
-      busy = false;
+      busy = cancelling = false;
       _notify();
     }
   }
@@ -197,6 +210,9 @@ class PublishController extends ChangeNotifier {
   Future<void> publish() async {
     if (busy || target == null || project == null || account == null) return;
     busy = publishing = true;
+    cancelling = false;
+    startedAt = DateTime.now();
+    step = state?.pending == true ? 3 : 0;
     _cancelled = false;
     error = '';
     WebsiteArtifact? artifact;
@@ -223,6 +239,8 @@ class PublishController extends ChangeNotifier {
           expectedHead: state!.commit,
         );
         _check();
+        step = 1;
+        _notify();
         artifact = await builder.build(project!, progress: _progress);
         _check();
         // Check again after the build; changes made elsewhere must not be overwritten.
@@ -235,6 +253,8 @@ class PublishController extends ChangeNotifier {
         _check();
         await artifact.verifyUnchanged();
         _check();
+        step = 2;
+        _notify();
         final commit = await github.upload(
           destination,
           state!.workspaceId,
@@ -261,6 +281,7 @@ class PublishController extends ChangeNotifier {
         expectedHead: state!.commit,
       );
       _check();
+      step = 3;
       _progress('网页已上传，正在等待 GitHub 上线…');
       final url = await github.enable(destination);
       _check();
@@ -283,6 +304,7 @@ class PublishController extends ChangeNotifier {
               publishedAt: DateTime.now(),
             ),
           );
+          step = 4;
           message = '博客已上线。';
           break;
         }
@@ -291,7 +313,18 @@ class PublishController extends ChangeNotifier {
             '网页已上传，GitHub 仍在处理。稍后点击“继续确认上线”，无需重新上传。',
           );
         }
-        await Future<void>.delayed(pollInterval);
+        final wait = Completer<void>();
+        _pollWait = wait;
+        final timer = Timer(pollInterval, () {
+          if (!wait.isCompleted) wait.complete();
+        });
+        if (_cancelled && !wait.isCompleted) wait.complete();
+        try {
+          await wait.future;
+        } finally {
+          timer.cancel();
+          _pollWait = null;
+        }
       }
     } on PublishCancelled {
       message = state?.pending == true
@@ -307,13 +340,16 @@ class PublishController extends ChangeNotifier {
           /* Best-effort removal of temporary web output. */
         }
       }
-      busy = publishing = false;
+      busy = publishing = cancelling = false;
       _notify();
     }
   }
 
   Future<void> cancel() async {
+    if (cancelling) return;
+    cancelling = true;
     _cancelled = true;
+    if (_pollWait?.isCompleted == false) _pollWait!.complete();
     _progress(publishing ? '正在停止本机发布操作…' : '正在取消连接…');
     await builder.cancel();
   }
@@ -331,6 +367,7 @@ class PublishController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = _cancelled = true;
+    if (_pollWait?.isCompleted == false) _pollWait!.complete();
     super.dispose();
   }
 }

@@ -1,3 +1,4 @@
+import 'package:blog_studio/ui/components/operation_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:blog_studio/controllers/publish_controller.dart';
 
@@ -227,7 +228,17 @@ class PublishingPage extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (c.busy) ...[
+                    if (c.publishing ||
+                        c.error.isNotEmpty ||
+                        c.startedAt != null) ...[
+                      OperationProgress(
+                        stages: const ['仓库检查', '网页构建', '上传', '上线确认'],
+                        current: c.step,
+                        running: c.publishing && !c.cancelling,
+                        startedAt: c.startedAt,
+                      ),
+                      const SizedBox(height: 14),
+                    ] else if (c.busy) ...[
                       const LinearProgressIndicator(),
                       const SizedBox(height: 14),
                     ],
@@ -261,6 +272,8 @@ class PublishingPage extends StatelessWidget {
                           label: Text(
                             c.state?.pending == true
                                 ? '继续确认上线'
+                                : c.error.isNotEmpty
+                                ? '重试发布'
                                 : c.state?.publishedAt == null
                                 ? '发布博客'
                                 : '发布更新',
@@ -273,8 +286,14 @@ class PublishingPage extends StatelessWidget {
                           ),
                         if (c.publishing || c.authorization != null)
                           TextButton(
-                            onPressed: c.cancel,
-                            child: const Text('取消'),
+                            onPressed: c.cancelling ? null : c.cancel,
+                            child: Text(
+                              c.cancelling
+                                  ? '正在取消…'
+                                  : c.state?.pending == true
+                                  ? '暂停确认'
+                                  : '取消',
+                            ),
                           ),
                       ],
                     ),

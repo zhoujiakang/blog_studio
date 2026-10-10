@@ -25,6 +25,8 @@ class PreviewManager extends ChangeNotifier {
   String preparationMessage = '正在检查预览…';
   String? preparationFailureMessage;
   double? preparationProgress;
+  int preparationStep = 0;
+  DateTime? preparationStartedAt;
   void _progress(String message, [double? fraction]) {
     preparationMessage = message;
     preparationProgress = fraction;
@@ -93,6 +95,8 @@ class PreviewManager extends ChangeNotifier {
     error = null;
     preparationFailureMessage = null;
     var stage = 'runtime';
+    preparationStep = 0;
+    preparationStartedAt = DateTime.now();
     _progress('正在检查$purpose所需组件…');
     try {
       if (runtime.status != RuntimeStatus.ready) {
@@ -109,6 +113,7 @@ class PreviewManager extends ChangeNotifier {
       }
       _checkPreparation();
       stage = 'dependencies';
+      preparationStep = 1;
       _progress('正在检查博客依赖…');
       report = await inspect(project, runtime);
       _checkPreparation();
@@ -118,6 +123,8 @@ class PreviewManager extends ChangeNotifier {
       }
       _checkPreparation();
       stage = 'start';
+      preparationStep = 2;
+      preparationProgress = null;
       return await finish(runtime);
     } catch (e) {
       if (_cancelPreparation) throw PreviewPreparationCancelled();
@@ -246,7 +253,12 @@ class PreviewManager extends ChangeNotifier {
           }
         }),
       );
-      await done.future;
+      try {
+        await done.future.timeout(const Duration(minutes: 10));
+      } on TimeoutException {
+        await cancelInstall();
+        throw const FormatException('准备时间过长，博客依赖尚未安装完成，请稍后重试。');
+      }
       await process.exitCode;
       final health = await inspect(project, runtime);
       if (health.status != DependencyStatus.ready) {
@@ -265,10 +277,25 @@ class PreviewManager extends ChangeNotifier {
   Future<void> cancelInstall() async {
     final process = _installer;
     if (process == null) return;
-    process.stdin.writeln('cancel');
-    await process.stdin.flush();
+    try {
+      process.stdin.writeln('cancel');
+      await process.stdin.flush();
+    } catch (_) {
+      runtimeDetector.processes.terminate(process);
+    }
     // The Node supervisor terminates its own npm process group and cleans staging.
-    await process.exitCode.timeout(const Duration(seconds: 15));
+    try {
+      await process.exitCode.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      runtimeDetector.processes.terminate(process);
+      await process.exitCode.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          runtimeDetector.processes.terminate(process, force: true);
+          return -1;
+        },
+      );
+    }
   }
 
   Future<Uri> start(ProjectSession project, RuntimeEnvironment runtime) async {

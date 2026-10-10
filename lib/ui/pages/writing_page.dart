@@ -26,7 +26,7 @@ class WritingPage extends StatelessWidget {
   set dragging(bool value) => controller.dragging = value;
   String get _saveLabel => switch (session.status) {
     SaveStatus.clean => '已保存',
-    SaveStatus.dirty => '待保存',
+    SaveStatus.dirty => session.recovered ? '已恢复，待保存' : '待保存',
     SaveStatus.saving => '保存中…',
     SaveStatus.failed => '保存失败',
     SaveStatus.conflict => '外部修改冲突',
@@ -62,13 +62,18 @@ class WritingPage extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
-              _saveLabel,
-              style: TextStyle(
-                fontSize: 12,
-                color: session.error == null
-                    ? const Color(0xff888888)
-                    : Colors.red,
+            Tooltip(
+              message: session.lastSavedAt == null
+                  ? _saveLabel
+                  : '上次保存：${session.lastSavedAt!.toLocal().toString().split('.').first}',
+              child: Text(
+                _saveLabel,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: session.error == null
+                      ? const Color(0xff888888)
+                      : Colors.red,
+                ),
               ),
             ),
             IconButton(
@@ -102,35 +107,45 @@ class WritingPage extends StatelessWidget {
           ],
         ),
       ),
-      if (session.error != null)
+      if (session.error != null || session.recoveryError != null)
         Container(
           color: const Color(0xfffff6f1),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  session.error!,
-                  style: const TextStyle(fontSize: 12),
-                ),
+              Text(
+                session.error ?? session.recoveryError!,
+                style: const TextStyle(fontSize: 12),
               ),
-              TextButton(
-                onPressed: () => session.flush(),
-                child: const Text('重试'),
-              ),
-              TextButton(
-                onPressed: controller.reloadDocument,
-                child: const Text('重新加载'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  try {
-                    await controller.copy();
-                  } catch (e) {
-                    controller.prompts.message('$e');
-                  }
-                },
-                child: const Text('复制正文'),
+              Wrap(
+                spacing: 6,
+                children: [
+                  TextButton(
+                    onPressed: () => session.flush(),
+                    child: const Text('重试'),
+                  ),
+                  if (session.status == SaveStatus.conflict ||
+                      session.status == SaveStatus.failed)
+                    TextButton(
+                      onPressed: () => controller.run(session.saveCopy()),
+                      child: const Text('另存副本'),
+                    ),
+                  TextButton(
+                    onPressed: controller.reloadDocument,
+                    child: const Text('重新加载'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await controller.copy();
+                      } catch (e) {
+                        controller.prompts.message('$e');
+                      }
+                    },
+                    child: const Text('复制正文'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -176,8 +191,9 @@ class WritingPage extends StatelessWidget {
                     blocked: session.busy || session.importing,
                     onInsert: (path) async {
                       await session.insertNote(path);
-                      if (session.error != null) {
-                        controller.prompts.message(session.error!);
+                      final message = session.error ?? session.recoveryError;
+                      if (message != null) {
+                        controller.prompts.message(message);
                       }
                     },
                   ),

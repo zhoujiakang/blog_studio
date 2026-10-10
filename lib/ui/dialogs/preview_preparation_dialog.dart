@@ -1,3 +1,5 @@
+import 'package:blog_studio/ui/components/operation_progress.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -62,8 +64,12 @@ class _PreviewPreparationDialogState extends State<PreviewPreparationDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!failed) ...[
-                LinearProgressIndicator(
-                  value: widget.preview.preparationProgress,
+                OperationProgress(
+                  stages: const ['预览组件', '博客依赖', '启动博客'],
+                  current: widget.preview.preparationStep,
+                  running: !cancelling,
+                  startedAt: widget.preview.preparationStartedAt,
+                  fraction: widget.preview.preparationProgress,
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -76,7 +82,18 @@ class _PreviewPreparationDialogState extends State<PreviewPreparationDialog> {
                   style: TextStyle(fontSize: 12, color: Color(0xff888888)),
                 ),
               ] else
-                Text(failureMessage),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OperationProgress(
+                      stages: const ['预览组件', '博客依赖', '启动博客'],
+                      current: widget.preview.preparationStep,
+                      running: false,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(failureMessage),
+                  ],
+                ),
             ],
           ),
         ),
