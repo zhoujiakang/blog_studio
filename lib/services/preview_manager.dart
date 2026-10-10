@@ -23,6 +23,7 @@ class PreviewManager extends ChangeNotifier {
   final ManagedRuntime managedRuntime;
   bool preparing = false, _cancelPreparation = false;
   String preparationMessage = '正在检查预览…';
+  String? preparationFailureMessage;
   double? preparationProgress;
   void _progress(String message, [double? fraction]) {
     preparationMessage = message;
@@ -90,6 +91,8 @@ class PreviewManager extends ChangeNotifier {
     preparing = true;
     _cancelPreparation = false;
     error = null;
+    preparationFailureMessage = null;
+    var stage = 'runtime';
     _progress('正在检查$purpose所需组件…');
     try {
       if (runtime.status != RuntimeStatus.ready) {
@@ -105,6 +108,7 @@ class PreviewManager extends ChangeNotifier {
             });
       }
       _checkPreparation();
+      stage = 'dependencies';
       _progress('正在检查博客依赖…');
       report = await inspect(project, runtime);
       _checkPreparation();
@@ -113,10 +117,19 @@ class PreviewManager extends ChangeNotifier {
         await install(project, runtime, report);
       }
       _checkPreparation();
+      stage = 'start';
       return await finish(runtime);
     } catch (e) {
       if (_cancelPreparation) throw PreviewPreparationCancelled();
       error = '$e';
+      preparationFailureMessage = switch (stage) {
+        'runtime' =>
+          e is SocketException || e is HttpException || e is TimeoutException
+              ? '暂时无法连接预览组件下载服务。请稍后重试，文章和图片不会受影响。'
+              : '预览组件准备失败，请重新尝试。文章和图片会保留。',
+        'dependencies' => '博客依赖准备失败，请重新尝试。文章和图片会保留。',
+        _ => e is TimeoutException ? '本地博客启动超时，请重新尝试。' : '本地博客未能启动，请重新尝试。',
+      };
       rethrow;
     } finally {
       preparing = false;

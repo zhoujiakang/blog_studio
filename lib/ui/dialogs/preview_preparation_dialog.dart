@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -43,11 +42,8 @@ class _PreviewPreparationDialogState extends State<PreviewPreparationDialog> {
             error is FormatException &&
                 RegExp(r'^(暂时没有适合|下载|预览组件|这台电脑|准备时间)').hasMatch(error.message)
             ? error.message
-            : error is SocketException ||
-                  error is HttpException ||
-                  error is TimeoutException
-            ? '下载未完成，请检查网络连接后重试。'
-            : '这次没能完成预览准备。可以重试，已有内容会保留。';
+            : widget.preview.preparationFailureMessage ??
+                  '这次没能完成预览准备。可以重试，已有内容会保留。';
       });
     }
   }

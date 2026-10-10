@@ -38,17 +38,34 @@ class RuntimeDetector {
     String? npmPath,
   }) async {
     final paths = [...platform.searchPaths(environment), ...commonPaths];
-    final node = await _find('node', nodePath, paths);
-    final npm = await _find('npm', npmPath, [
-      if (node != null) p.dirname(node),
-      ...paths,
-    ]);
-    if (node == null || npm == null) {
-      return const RuntimeEnvironment(
-        status: RuntimeStatus.missing,
-        reason: '未找到 Node.js 或 npm，请安装后重新检测，或选择可执行文件。',
-      );
+    final nodes = nodePath == null
+        ? paths
+              .where((path) => path.isNotEmpty)
+              .map((path) => p.join(path, 'node'))
+        : [nodePath];
+    final visited = <String>{};
+    RuntimeEnvironment? failure;
+    for (final candidate in nodes) {
+      final node = await _find('node', candidate, const []);
+      if (node == null || !visited.add(node)) continue;
+      final npm = await _find('npm', npmPath, [p.dirname(node), ...paths]);
+      if (npm == null) continue;
+      final result = await _inspect(project, node, npm);
+      if (result.status == RuntimeStatus.ready) return result;
+      failure ??= result;
     }
+    return failure ??
+        const RuntimeEnvironment(
+          status: RuntimeStatus.missing,
+          reason: '未找到可用的预览组件，应用可以自动准备。',
+        );
+  }
+
+  Future<RuntimeEnvironment> _inspect(
+    ProjectSession project,
+    String node,
+    String npm,
+  ) async {
     try {
       final env = subprocessEnvironment(node);
       final nv = await _version(node, env);

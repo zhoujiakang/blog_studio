@@ -22,6 +22,7 @@ class FakeManaged extends ManagedRuntime {
   FakeManaged() : super(directory: Directory('/unused'));
   int downloads = 0;
   RuntimeEnvironment? cached;
+  Object? failure;
   @override
   Future<RuntimeEnvironment?> detect(
     ProjectSession project,
@@ -34,6 +35,7 @@ class FakeManaged extends ManagedRuntime {
     RuntimeProgress progress,
   ) async {
     downloads++;
+    if (failure != null) throw failure!;
     progress('正在下载预览组件…', 0.5);
     cached = ready;
     return ready;
@@ -44,6 +46,7 @@ class FakePreview extends PreviewManager {
   FakePreview(FakeManaged managed) : super(managedRuntime: managed);
   int installed = 0, started = 0;
   bool failInstall = false;
+  bool failStart = false;
   Completer<void>? installGate;
   @override
   Future<DependencyReport> inspect(
@@ -75,6 +78,7 @@ class FakePreview extends PreviewManager {
   @override
   Future<Uri> start(ProjectSession project, RuntimeEnvironment runtime) async {
     started++;
+    if (failStart) throw TimeoutException('local start');
     return Uri.parse('http://127.0.0.1:12345/');
   }
 }
@@ -115,6 +119,41 @@ void main() {
       preview.dispose();
     }
   });
+  test(
+    'download, dependencies and local startup report different failures',
+    () async {
+      final managed = FakeManaged()..failure = const SocketException('offline');
+      final preview = FakePreview(managed);
+      try {
+        await expectLater(
+          preview.prepareAndStart(
+            project,
+            const RuntimeEnvironment(status: RuntimeStatus.missing),
+            null,
+          ),
+          throwsA(isA<SocketException>()),
+        );
+        expect(preview.preparationFailureMessage, contains('下载服务'));
+        managed.failure = null;
+        preview.failInstall = true;
+        await expectLater(
+          preview.prepareAndStart(project, ready, null),
+          throwsStateError,
+        );
+        expect(preview.preparationFailureMessage, contains('博客依赖'));
+        preview.failInstall = false;
+        preview.failStart = true;
+        await expectLater(
+          preview.prepareAndStart(project, ready, null),
+          throwsA(isA<TimeoutException>()),
+        );
+        expect(preview.preparationFailureMessage, contains('启动超时'));
+        expect(preview.preparationFailureMessage, isNot(contains('下载')));
+      } finally {
+        preview.dispose();
+      }
+    },
+  );
   test('cancelling preparation never starts the preview', () async {
     final preview = FakePreview(FakeManaged())..installGate = Completer<void>();
     final future = preview.prepareAndStart(project, ready, null);

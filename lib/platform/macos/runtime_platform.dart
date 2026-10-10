@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:pub_semver/pub_semver.dart';
 
 import 'package:blog_studio/platform/contracts/runtime_platform.dart';
 import 'package:blog_studio/platform/shared/process_runner.dart';
@@ -9,8 +10,34 @@ class MacRuntimePlatform implements RuntimePlatform {
   @override
   List<String> get commonPaths => const ['/opt/homebrew/bin', '/usr/local/bin'];
   @override
-  List<String> searchPaths(Map<String, String> environment) =>
-      environment['PATH']?.split(':') ?? [];
+  List<String> searchPaths(Map<String, String> environment) {
+    final paths = environment['PATH']?.split(':') ?? <String>[];
+    final home = environment['HOME'];
+    final nvmRoot =
+        environment['NVM_DIR'] ?? (home == null ? null : p.join(home, '.nvm'));
+    if (nvmRoot == null || nvmRoot.isEmpty) return paths;
+    // Finder does not load shell profiles. Inspect installed versions without
+    // sourcing user scripts or changing the system environment.
+    final versions = <({Version version, String bin})>[];
+    try {
+      final directory = Directory(p.join(nvmRoot, 'versions', 'node'));
+      if (!directory.existsSync()) return paths;
+      for (final entry in directory.listSync(followLinks: false)) {
+        if (entry is! Directory) continue;
+        final name = p.basename(entry.path);
+        if (!RegExp(r'^v\d+\.\d+\.\d+$').hasMatch(name)) continue;
+        versions.add((
+          version: Version.parse(name.substring(1)),
+          bin: p.join(entry.path, 'bin'),
+        ));
+      }
+    } on FileSystemException {
+      // An unreadable version manager must not hide other installations.
+    }
+    versions.sort((a, b) => b.version.compareTo(a.version));
+    return [...paths, ...versions.map((entry) => entry.bin)];
+  }
+
   @override
   Map<String, String> processEnvironment(
     String node,
