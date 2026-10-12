@@ -4,6 +4,7 @@ import content from 'virtual:blog-content';
 import Icon from './components/Icon.vue';
 import defaultBackground from './assets/cover.svg';
 import { renderMarkdown } from './lib/markdown';
+import { copyCode } from './lib/code-blocks';
 const { site, posts, theme } = content;
 const backgroundImage = theme.backgroundImage || '';
 const pageSize = 6;
@@ -18,7 +19,10 @@ const scrollY = ref(0),
   copyMessage = ref('复制 Markdown');
 const light = ref(false);
 try {
-  light.value = localStorage.getItem('vue-blog-theme') === 'light';
+  const savedTheme = localStorage.getItem('vue-blog-theme');
+  light.value = savedTheme
+    ? savedTheme === 'light'
+    : !matchMedia('(prefers-color-scheme: dark)').matches;
 } catch {
   /* Storage is optional. */
 }
@@ -91,6 +95,8 @@ const asset = (value: string) => {
 };
 // Theme artwork stays in the website; user-selected images live in resource/images.
 const background = (value = '') => value ? asset(value) : defaultBackground;
+// Vite may inline SVG artwork with single quotes inside its data URL.
+const backgroundStyle = (value = '') => `url(${JSON.stringify(background(value))})`;
 const date = (value: string) =>
   new Date(value)
     .toLocaleDateString('zh-CN', {
@@ -184,7 +190,6 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
     :class="{ light }"
     :style="{
       '--accent': content.theme?.themeColor || '#87968B',
-      '--background-image': `url('${background(backgroundImage)}')`,
     }"
   >
     <div class="reading-progress" :style="{ width: `${progress}%` }" />
@@ -192,8 +197,7 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
       class="hero"
       :class="{ 'home-hero': section === 'home', 'post-hero': currentPost }"
       :style="{
-        backgroundImage:
-          `url('${background(currentPost?.cover || backgroundImage)}')`,
+        backgroundImage: backgroundStyle(currentPost?.cover || backgroundImage),
       }"
     >
       <nav class="top-nav" :class="{ fixed: scrollY > 80 }" aria-label="主导航">
@@ -239,7 +243,7 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
               : 'RECORDS & MEMORIES'
         }}</span>
         <h1>{{ title }}</h1>
-        <p v-if="section === 'home'">{{ site.subtitle }}<span class="cursor">|</span></p>
+        <p v-if="section === 'home'">{{ site.subtitle }}</p>
         <div v-else-if="currentPost" class="hero-meta">
           <span
             ><Icon name="calendar" :size="15" /> 发表于 {{ date(currentPost.date) }}</span
@@ -274,7 +278,7 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
         >
       </div>
     </header>
-    <main id="content" class="layout">
+    <main id="content" class="layout" :class="{ 'reading-layout': currentPost }">
       <section class="main-column">
         <template v-if="section === 'home'">
           <div class="list-heading">
@@ -285,17 +289,16 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
             <span>{{ posts.length }} 篇文章</span>
           </div>
           <article
-            v-for="(post, index) in paginated"
+            v-for="post in paginated"
             :key="post.id"
             class="post-card panel"
-            :class="{ reverse: index % 2 === 1 }"
           >
-            <a :href="urlFor(post.id)" class="post-cover"
+            <a v-if="post.cover" :href="urlFor(post.id)" class="post-cover"
               ><img
                 :src="background(post.cover || backgroundImage)"
                 :alt="post.title"
                 loading="lazy"
-              /><span>{{ post.categories[0] || '随笔' }}</span></a
+              /><span v-if="post.categories.length">{{ post.categories[0] }}</span></a
             >
             <div class="post-info">
               <div class="post-date">
@@ -346,7 +349,15 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
           <div v-if="currentPost.summary" class="article-summary">
             {{ currentPost.summary }}
           </div>
-          <div class="prose" v-html="rendered.html" />
+          <details v-if="rendered.headings.length" class="mobile-toc">
+            <summary>文章目录 · {{ rendered.headings.length }} 节</summary>
+            <nav aria-label="文章目录">
+              <button v-for="heading in rendered.headings" :key="heading.id"
+                @click="scrollHeading(heading.id)"
+                :style="{ paddingLeft: `${(heading.level - 1) * 10}px` }">{{ heading.text }}</button>
+            </nav>
+          </details>
+          <div class="prose" @click="copyCode" v-html="rendered.html" />
           <div class="article-license">
             <div><strong>文章作者：</strong>{{ site.author }}</div>
             <div><strong>版权声明：</strong>转载请注明作者与出处。</div>
@@ -373,7 +384,7 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
         <section v-else-if="section === 'about'" class="about panel">
           <span class="eyebrow">HELLO, WORLD</span>
           <h2>你好，我是 {{ site.author }}。</h2>
-          <div class="prose" v-html="rendered.html" />
+          <div class="prose" @click="copyCode" v-html="rendered.html" />
           <div class="about-sign">
             {{ site.subtitle }}<Icon name="feather" :size="32" />
           </div>
@@ -421,8 +432,8 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
                 :key="post.id"
                 :href="urlFor(post.id)"
                 class="timeline-post"
-                ><img
-                  :src="background(post.cover || backgroundImage)"
+                ><img v-if="post.cover"
+                  :src="background(post.cover)"
                   :alt="post.title"
                   loading="lazy" />
                 <div>
@@ -460,7 +471,7 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
           >
 
         </section>
-        <section class="panel sidebar-card announcement">
+        <section v-if="theme.announcement" class="panel sidebar-card announcement">
           <h3><Icon name="megaphone" :size="19" /> 公告</h3>
           <p>{{ theme.announcement }}</p>
         </section>
@@ -485,7 +496,7 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
             :key="post.id"
             :href="urlFor(post.id)"
             class="recent-post"
-            ><img :src="background(post.cover || backgroundImage)" alt="" loading="lazy" />
+            ><img v-if="post.cover" :src="background(post.cover)" alt="" loading="lazy" />
             <div>
               <span>{{ post.title }}</span
               ><small>{{ date(post.date) }}</small>
@@ -549,7 +560,9 @@ const postIndex = computed(() => posts.findIndex((p) => p.id === currentPost.val
       </button>
     </div>
     <Teleport to="body"
-      ><div v-if="searchOpen" class="search-overlay" @click.self="searchOpen = false">
+      ><div v-if="searchOpen" class="search-overlay" :class="{ light }"
+        :style="{ '--accent': content.theme?.themeColor || '#87968B' }"
+        @click.self="searchOpen = false">
         <section
           class="search-dialog"
           role="dialog"

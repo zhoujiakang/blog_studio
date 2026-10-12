@@ -1,5 +1,6 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { decorateCodeBlocks } from './code-blocks';
 export function renderMarkdown(source: string) {
   const clean = DOMPurify.sanitize(marked.parse(source, { async: false, breaks: true }), {
     USE_PROFILES: { html: true },
@@ -26,5 +27,6 @@ export function renderMarkdown(source: string) {
       a.rel = 'noopener noreferrer';
     }
   });
+  decorateCodeBlocks(document);
   return { html: document.body.innerHTML, headings };
 }

@@ -14,8 +14,8 @@
         },
         {
           "path": "README.md",
-          "length": 3008,
-          "hash": "b163a7a6991bdfc25e2163f6dcafe55f140ac2784466aa11050cb94a5a1317cc"
+          "length": 3777,
+          "hash": "b9a910b9d194e4f76689c7bdaaf2e9e997781727944f17b27aaf106b2b21662e"
         },
         {
           "path": "index.html",
@@ -23,14 +23,19 @@
           "hash": "c0e11999926baee26632f6557a517709bbeb8cdcc831a98545c6cb71d71c309c"
         },
         {
+          "path": "licenses/highlight.js.txt",
+          "length": 1514,
+          "hash": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490"
+        },
+        {
           "path": "package-lock.json",
-          "length": 82375,
-          "hash": "b460e42e2ec67c33dcaea68f85e8c3e5110079631d8d6d8ad0d42b7b78199180"
+          "length": 82778,
+          "hash": "ed106085bae988464b2253a42c5fc0b5fd1af0892d2714e6fa292a719b80afb3"
         },
         {
           "path": "package.json",
-          "length": 748,
-          "hash": "a5a19f01e55228cd2bc4aa0fef9baa5086706224118cc89e43eafa4681848b43"
+          "length": 780,
+          "hash": "150eb9c213868e4a7852fe3783054c9110b0afa4f66314172ec38c23e96f14c4"
         },
         {
           "path": "scripts/content.mjs",
@@ -44,8 +49,8 @@
         },
         {
           "path": "src/App.vue",
-          "length": 21719,
-          "hash": "2d2afebc04531415719232205501c6a8f39a6d89959ba96e9b16d09689159afb"
+          "length": 22560,
+          "hash": "ec4b399f25e3703f78949e14dc0e7093fcb017aaf427719bad84b5f78389f20c"
         },
         {
           "path": "src/assets/cover.svg",
@@ -63,9 +68,14 @@
           "hash": "f719dafc3d3ac336b1e07a0f6ddb15f1725696dc27ba8986a0f820ebdf5ade42"
         },
         {
+          "path": "src/lib/code-blocks.ts",
+          "length": 2915,
+          "hash": "5158cdc14284699f8ee04139cf2f5dfee1cda7454ec7a7bb499a888ef525c726"
+        },
+        {
           "path": "src/lib/markdown.ts",
-          "length": 1109,
-          "hash": "ace2f7f5de154ae0bef68cb4def750568a8d54edd203e190583ac8f6bd32c49a"
+          "length": 1193,
+          "hash": "59af4c59b8029620f5c60eb2508d5d8de9be035ab40bc7ed4780cb4ed62b873c"
         },
         {
           "path": "src/lib/types.ts",
@@ -79,8 +89,8 @@
         },
         {
           "path": "src/style.css",
-          "length": 18459,
-          "hash": "62834d0964719819a64044208939c8ac6e1cab03b131ea7874471f37e42f74db"
+          "length": 26662,
+          "hash": "c808820ae7f7deaaaaaf9f9fd740f097beed56871d49c77cef197462ac9c76a9"
         },
         {
           "path": "template.json",
@@ -91,6 +101,11 @@
           "path": "tests/app.test.ts",
           "length": 4145,
           "hash": "2cd9d53b876be319b43219a2ba21244b04996d292280c7dc7fbdbf9a85708a68"
+        },
+        {
+          "path": "tests/code-blocks.test.ts",
+          "length": 2262,
+          "hash": "91b49d90bfc352bef4bbeabc4fe8817164daa39a5ebe2d4e2459511b4471aa00"
         },
         {
           "path": "tests/content.test.mjs",
