@@ -1,3 +1,4 @@
+import 'package:blog_studio/models/trash_entry.dart';
 import 'package:blog_studio/controllers/publish_controller.dart';
 import 'package:blog_studio/platform/contracts/desktop_platform.dart';
 import 'package:blog_studio/storage/image_importer.dart';
@@ -151,6 +152,24 @@ class StudioController extends ChangeNotifier {
         await _confirm('移入回收区', '文章可在回收区恢复，图片会保留。', '移入回收区')) {
       await run(session.deleteArticle(path: path));
     }
+  }
+
+  Future<void> deleteTrashEntry(TrashEntry entry) async {
+    if (_operationBlocked) return;
+    final repository = session.repository;
+    if (!await _confirm(
+      '彻底删除',
+      '确定彻底删除“${entry.title}”吗？正文和该回收记录将永久删除，无法从回收区恢复。相关图片会保留。',
+      '彻底删除',
+    )) {
+      return;
+    }
+    if (!mounted ||
+        _operationBlocked ||
+        !identical(repository, session.repository)) {
+      return;
+    }
+    await run(session.deletePermanently(entry));
   }
 
   Future<void> reloadDocument() async {

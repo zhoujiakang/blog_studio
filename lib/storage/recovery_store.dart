@@ -28,11 +28,11 @@ class RecoveryStore {
   RecoveryStore(this.store);
   final FileStore store;
   final Map<String, String> errors = {};
-  static String _recordPath(String path) =>
+  static String recordPathFor(String path) =>
       '.blog-studio/recovery/${contentHash(utf8.encode(path))}.json';
 
   Future<void> checkpoint(RecoveryRecord record) async {
-    final path = _recordPath(record.path);
+    final path = recordPathFor(record.path);
     final file = File(await store.guard.resolve(path));
     final hash = await file.exists()
         ? contentHash(await file.readAsBytes())
@@ -73,7 +73,7 @@ class RecoveryStore {
           throw const FormatException('恢复记录格式无效，请保留恢复目录中的文件。');
         }
         await store.guard.resolve(path);
-        if (recordPath != _recordPath(path)) {
+        if (recordPath != recordPathFor(path)) {
           throw const FormatException('恢复记录路径不匹配。');
         }
         final bytes = Uint8List.fromList(
@@ -107,7 +107,7 @@ class RecoveryStore {
     String body,
     Map<String, dynamic> attributes,
   ) => store.serial(() async {
-    final file = File(await store.guard.resolve(_recordPath(path)));
+    final file = File(await store.guard.resolve(recordPathFor(path)));
     if (!await file.exists()) return;
     final data = jsonDecode(await file.readAsString()) as Map;
     // A later keystroke may already have queued a newer journal entry.

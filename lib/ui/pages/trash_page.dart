@@ -20,7 +20,7 @@ class TrashPage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          '恢复文章或小记不会覆盖已有文件，图片始终保留。',
+          '可恢复或彻底删除文章与小记，图片会保留。',
           style: TextStyle(color: Color(0xff888888)),
         ),
         const SizedBox(height: 24),
@@ -48,10 +48,29 @@ class TrashPage extends StatelessWidget {
                       itemBuilder: (_, i) => ListTile(
                         title: Text(entries[i].title),
                         subtitle: Text(entries[i].originalPath),
-                        trailing: TextButton(
-                          onPressed: () =>
-                              controller.run(session.restore(entries[i].id)),
-                          child: const Text('恢复'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: controller.creationBlocked
+                                  ? null
+                                  : () => controller.run(
+                                      session.restore(entries[i].id),
+                                    ),
+                              child: const Text('恢复'),
+                            ),
+                            const SizedBox(width: 4),
+                            TextButton(
+                              onPressed: controller.creationBlocked
+                                  ? null
+                                  : () =>
+                                        controller.deleteTrashEntry(entries[i]),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xffa44a42),
+                              ),
+                              child: const Text('彻底删除'),
+                            ),
+                          ],
                         ),
                       ),
                     );

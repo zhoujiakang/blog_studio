@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:blog_studio/services/template_installer.dart';
 import 'package:blog_studio/services/project_service.dart';
+import 'package:blog_studio/storage/article_repository.dart';
+import 'package:blog_studio/storage/trash_repository.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:blog_studio/app/app_dependencies.dart';
@@ -97,6 +99,43 @@ class DropRecordingSession extends EditorSession {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'permanent deletion requires confirmation and refreshes the session',
+    () async {
+      final root = await Directory.systemTemp.createTemp(
+        'inkjian-confirm-purge-',
+      );
+      final session = EditorSession(editor: TestEditor())
+        ..repository = ArticleRepository(root.path)
+        ..project = ProjectSession(root: root.path);
+      final preview = TestPreview();
+      final prompts = TestPrompts();
+      final controller = StudioController(
+        session: session,
+        preview: preview,
+        prompts: prompts,
+        dependencies: AppDependencies.macos,
+      );
+      try {
+        expect(await session.createArticle('待确认删除'), true);
+        expect(await session.deleteArticle(), true);
+        final trash = TrashRepository(session.repository!.store);
+        final entry = (await trash.list()).single;
+        await controller.deleteTrashEntry(entry);
+        expect(await trash.list(), hasLength(1));
+        prompts.discard = true;
+        await controller.deleteTrashEntry(entry);
+        expect(await trash.list(), isEmpty);
+        expect(session.busy, false);
+        expect(prompts.messages, isEmpty);
+      } finally {
+        controller.dispose();
+        session.dispose();
+        preview.dispose();
+        await root.delete(recursive: true);
+      }
+    },
+  );
   test(
     'a generic drop event routes file bytes through the shared image flow',
     () async {

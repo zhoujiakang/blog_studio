@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:blog_studio/models/article.dart';
+import 'package:blog_studio/models/trash_entry.dart';
 import 'package:blog_studio/models/image.dart';
 import 'package:blog_studio/models/project.dart';
 import 'package:blog_studio/models/save_state.dart';
@@ -588,6 +589,10 @@ class EditorSession extends ChangeNotifier {
     final entry = (await trash.list()).firstWhere((e) => e.id == id);
     await trash.restore(entry);
     library.update(await repository!.read(entry.originalPath));
+  });
+  Future<bool> deletePermanently(TrashEntry entry) => _operation(() async {
+    await TrashRepository(repository!.store).deletePermanently(entry);
+    await _refreshRecoveries();
   });
   Future<void> reload() async {
     if (busy || importing || article == null) return;
