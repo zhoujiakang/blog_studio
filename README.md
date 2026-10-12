@@ -1,10 +1,47 @@
-<p align="center"><img src="assets/brand/logo-mark.svg" width="88" alt="拾笺 InkJian"></p>
-<h1 align="center">拾笺 InkJian</h1>
-<p align="center">拾起日常，落墨成笺。</p>
+<p align="center">
+  <img src="assets/readme/cover.svg" width="100%" alt="拾笺 InkJian — 拾起日常，落墨成笺。">
+</p>
 
-拾笺是本地 Markdown 写作与博客管理桌面应用。应用管理文章、图片、配置、模板、本地预览和 GitHub Pages 发布；网站模板负责展示。用户内容保存在自己选择的目录中。
+<p align="center"><strong>把文字留在本地，把故事分享出去。</strong></p>
+<p align="center">一款用于 Markdown 写作、小记与博客管理的桌面应用。</p>
 
-[下载应用](https://github.com/zhoujiakang/blog_studio/releases/latest) · [模板开发指南](template/DEVELOPMENT.md) · [模板目录说明](template/README.md) · [MIT 许可](LICENSE)
+<p align="center">
+  <a href="https://github.com/zhoujiakang/blog_studio/releases/latest"><strong>下载 macOS 应用</strong></a> ·
+  <a href="#开始使用">开始使用</a> ·
+  <a href="template/DEVELOPMENT.md">编写模板</a> ·
+  <a href="#架构与模块联系">了解架构</a>
+</p>
+<p align="center"><sub>macOS 12+ · Flutter 桌面应用 · Markdown 本地存储 · MIT</sub></p>
+
+<p align="center">
+  <img src="assets/readme/writing.jpg" width="100%" alt="拾笺真实写作界面：Markdown 实时渲染与文章属性面板">
+</p>
+<p align="center"><sub>直接写 Markdown，在同一编辑区实时渲染；文章属性在侧栏中分栏编辑。</sub></p>
+
+## 能做什么
+
+| 写作与整理 | 博客与分享 |
+| --- | --- |
+| **专注写作** — 输入 Markdown 并实时渲染，支持插图和文章属性编辑。 | **自由选择样式** — 多套模板共用一份内容，分别配置主题的文字、图片和颜色。 |
+| **随手小记** — 先记下零散想法，写文章时打开小记参考。 | **预览与分享** — 浏览本地博客，或构建静态网站发布到 GitHub Pages。 |
+| **整理内容** — 管理文章与草稿，用标签、分类树和搜索找到内容。 | **内容留在本地** — Markdown、图片和配置保存在自己选择的文件夹。 |
+
+## 界面一览
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <a href="assets/readme/library.jpg"><img src="assets/readme/library.jpg" width="100%" alt="文章管理：文章、草稿、小记和搜索"></a>
+      <br><strong>让内容井井有条</strong><br><sub>文章、草稿和小记各有自己的位置。</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="assets/readme/theme.jpg"><img src="assets/readme/theme.jpg" width="100%" alt="主题配置：背景图片、主题颜色和公告"></a>
+      <br><strong>把博客变成喜欢的样子</strong><br><sub>内容共用，主题各自配置。</sub>
+    </td>
+  </tr>
+</table>
+
+截图来自 macOS 实际运行界面，内容为独立示例博客。点击小图可查看原图。
 
 ## 使用范围
 
@@ -14,7 +51,8 @@
 
 安装 DMG 时，将 `InkJian.app` 拖到 Applications。能否直接通过 macOS 安全检查取决于安装包的签名与公证；没有 Developer ID 签名和公证的包可能需要在系统设置中允许打开。
 
-### 保存保护
+<details>
+<summary>了解自动保存、恢复与冲突保护</summary>
 
 - 正文和文章属性自动保存，编辑页显示保存状态及上次保存时间。输入法选字期间不会强行切换文档。
 - 未保存内容在本地单独备份；意外退出后重新打开博客，会自动接回最近一次未保存的编辑，其他文档在打开时恢复。恢复内容不会直接覆盖磁盘文件；突然断电仍可能丢失尚未写入备份的最后几次输入。
@@ -22,7 +60,9 @@
 - 这些保护在后台运行，没有图片管理或恢复记录入口。图片通过插图、封面和头像选择使用，不自动删除共享图片。
 - 预览和发布显示阶段与耗时，可取消并重试。网页已经上传时，取消只暂停上线确认；重试确认复用已有提交。
 
-## 日常使用
+</details>
+
+## 开始使用
 
 1. 选择空目录创建博客，或打开当前格式的已有博客。初始化从 GitHub 下载网站模板，不下载应用源码。
 2. 新建文章或小记。编辑器输入 Markdown 语法并实时渲染；文章最初保存为草稿，可转为正式文章。内容自动保存，也可手动保存。
@@ -83,6 +123,9 @@ my-blog/
 
 产品由应用块和博客块组成；博客块包含共享资源和网站模板。源码按语言、工具链和职责组织，不要求把产品模块机械地映射成目录。
 
+<details>
+<summary>展开源码分层与各操作的调用流程</summary>
+
 | 源码路径 | 职责与联系 |
 | --- | --- |
 | `lib/main.dart`、`lib/app.dart`、`lib/app/` | 入口、视觉品牌、版本、依赖组装及平台选择 |
@@ -116,6 +159,9 @@ my-blog/
 - **发布**：保存 → 检查授权和目标 → 在隔离目录执行模板 `build` → 检查输入变化和公开产物 → GitHub API 创建提交 → 确认 Pages 部署。
 
 模板源码不打入应用安装包。网页编辑器的构建资源和 Node 辅助脚本随应用分发。编辑器支持常用 Markdown 实时渲染，未支持的 HTML、数学或模板语法等片段以源码块保留；不保证所有语法均按原样实时预览。
+
+
+</details>
 
 ## GitHub Pages 发布
 
@@ -198,3 +244,5 @@ flutter test integration_test/all_native_test.dart -d macos --dart-define="INKJI
 其他 AI 或开发者编写模板时，请完整阅读 [模板开发指南](template/DEVELOPMENT.md)。当前代码要求 Vue 项目入口和兼容的 dev/build 命令；不能仅提供 HTML 截图或让模板自带用户文章。符合规范的本地模板无需修改桌面应用即可识别、预览和构建；出现在官方远程下载列表中还需提交源码并重新生成清单。
 
 自有代码采用 [MIT](LICENSE)。Flutter 与系统插件、Milkdown/Crepe、Vue/Vite、Markdown 解析和清理组件是第三方依赖，不是本项目重写的基础框架。编辑器构建生成第三方许可声明，Flutter 依赖通过框架许可注册保留归属。第三方模板脚本在本机执行，应只使用可信来源。
+
+<p align="center"><sub>拾起日常，落墨成笺。</sub></p>
