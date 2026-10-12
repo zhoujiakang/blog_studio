@@ -7,6 +7,12 @@ class PublishingException implements Exception {
   String toString() => message;
 }
 
+class ExistingBlogPublication extends PublishingException {
+  const ExistingBlogPublication(this.workspaceId)
+    : super('该仓库已有博客发布记录，需要确认后重新关联。');
+  final String workspaceId;
+}
+
 class PublishCancelled implements Exception {}
 
 class PublishTarget {
@@ -20,6 +26,33 @@ class PublishTarget {
   }
   factory PublishTarget.fromJson(Map<String, dynamic> value) =>
       PublishTarget(value['owner'] as String, value['repository'] as String);
+  factory PublishTarget.fromUrl(String address) {
+    final text = address.trim();
+    final normalized = text.startsWith('git@github.com:')
+        ? 'https://github.com/${text.substring('git@github.com:'.length)}'
+        : text;
+    final uri = Uri.tryParse(normalized);
+    if (uri == null ||
+        uri.host.toLowerCase() != 'github.com' ||
+        !['https', 'ssh'].contains(uri.scheme) ||
+        uri.hasQuery ||
+        uri.hasFragment ||
+        uri.hasPort ||
+        (uri.userInfo.isNotEmpty &&
+            !(uri.scheme == 'ssh' && uri.userInfo == 'git'))) {
+      throw const PublishingException(
+        '请输入 GitHub 仓库地址，例如 https://github.com/用户名/仓库名。',
+      );
+    }
+    final parts = uri.pathSegments.where((part) => part.isNotEmpty).toList();
+    if (parts.length != 2) {
+      throw const PublishingException('请输入仓库地址，而不是网站或文章地址。');
+    }
+    final repository = parts[1].endsWith('.git')
+        ? parts[1].substring(0, parts[1].length - 4)
+        : parts[1];
+    return PublishTarget(parts[0], repository);
+  }
   final String owner, repository;
   String get fullName => '$owner/$repository';
   String get apiPath => '/repos/$owner/$repository';

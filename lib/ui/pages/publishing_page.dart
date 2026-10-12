@@ -1,6 +1,7 @@
 import 'package:blog_studio/ui/components/operation_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:blog_studio/controllers/publish_controller.dart';
+import 'package:blog_studio/models/publishing.dart';
 
 class PublishingPage extends StatelessWidget {
   const PublishingPage({super.key, required this.controller});
@@ -29,6 +30,43 @@ class PublishingPage extends StatelessWidget {
       if (approved != true) return;
     }
     await controller.publish();
+  }
+
+  Future<void> _selectRepository(
+    BuildContext context,
+    PublishTarget target,
+  ) async {
+    await controller.selectRepository(target);
+    if (context.mounted) await _confirmReconnection(context);
+  }
+
+  Future<void> _confirmReconnection(BuildContext context) async {
+    final target = controller.repositoryToReconnect;
+    if (target == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('重新关联原博客'),
+        content: Text(
+          '仓库 ${target.fullName} 已有博客发布记录，但本地缺少匹配的记录。\n\n如果它是这个博客原先的发布仓库，可以重新关联。之后发布会用当前本地博客替换仓库中的网页，并保留自定义域名。请勿关联其他博客的仓库。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认是原博客'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await controller.confirmReconnection();
+    } else {
+      controller.cancelReconnection();
+    }
   }
 
   Widget _section(String title, Widget child) => Container(
@@ -163,7 +201,8 @@ class PublishingPage extends StatelessWidget {
                             ? null
                             : (name) {
                                 if (name != null) {
-                                  c.selectRepository(
+                                  _selectRepository(
+                                    context,
                                     c.repositories
                                         .firstWhere(
                                           (r) => r.target.fullName == name,
@@ -173,6 +212,18 @@ class PublishingPage extends StatelessWidget {
                                 }
                               },
                       ),
+                      if (c.suggestedRepository != null && c.target == null)
+                        TextButton(
+                          onPressed: c.busy
+                              ? null
+                              : () => _selectRepository(
+                                  context,
+                                  c.suggestedRepository!,
+                                ),
+                          child: Text(
+                            '检测到 Git 仓库：${c.suggestedRepository!.fullName}，检查并绑定',
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 10,
@@ -200,7 +251,7 @@ class PublishingPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        '新建公开仓库后，在授权页面只选择这个仓库，再回来刷新。请选择空仓库或仅含 README 的新仓库。',
+                        '新建公开仓库后，在授权页面只选择这个仓库，再回来刷新。可选择空仓库、仅含 README 的新仓库，或这个博客原先的发布仓库。',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xff888888),

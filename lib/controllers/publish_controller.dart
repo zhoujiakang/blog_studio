@@ -8,6 +8,7 @@ import 'package:blog_studio/services/publishing/blog_builder.dart';
 import 'package:blog_studio/services/publishing/github_auth.dart';
 import 'package:blog_studio/services/publishing/github_pages.dart';
 import 'package:blog_studio/storage/file_store.dart';
+import 'package:blog_studio/services/publishing/repository_locator.dart';
 import 'package:blog_studio/storage/publishing_store.dart';
 
 class PublishController extends ChangeNotifier {
@@ -29,6 +30,8 @@ class PublishController extends ChangeNotifier {
   ProjectSession? project;
   PublishingStore? _store;
   PublicationState? state;
+  PublishTarget? suggestedRepository, repositoryToReconnect;
+  String? _reconnectWorkspaceId;
   GitHubAccount? account;
   List<GitHubRepository> repositories = [];
   DeviceAuthorization? authorization;
@@ -81,12 +84,17 @@ class PublishController extends ChangeNotifier {
     error = message = '';
     project = next;
     state = null;
+    suggestedRepository = repositoryToReconnect = null;
+    _reconnectWorkspaceId = null;
     repositories = [];
     account = null;
     _store = PublishingStore(store);
     _notify();
     try {
       state = await _store!.load();
+      if (state!.target == null) {
+        suggestedRepository = await RepositoryLocator().detect(store);
+      }
       account = await auth.restore();
       if (account != null) repositories = await github.repositories();
     } catch (e) {
@@ -185,20 +193,89 @@ class PublishController extends ChangeNotifier {
     if (busy || state == null) return;
     busy = true;
     error = '';
+    repositoryToReconnect = null;
+    _reconnectWorkspaceId = null;
     _progress('正在检查发布仓库…');
     try {
-      final same = value.fullName == target?.fullName;
-      await github.inspect(
+      _requireAuthorized(value);
+      final previous = state!;
+      final same =
+          value.fullName.toLowerCase() == target?.fullName.toLowerCase();
+      final remote = await github.reconnect(
         value,
-        state!.workspaceId,
-        expectedHead: same ? state!.commit : null,
+        previous.workspaceId,
+        expectedHead: same ? previous.commit : null,
       );
-      if (!same) {
-        await _save(
-          PublicationState(workspaceId: state!.workspaceId, target: value),
-        );
-      }
+      await _save(
+        PublicationState(
+          workspaceId: previous.workspaceId,
+          target: value,
+          commit: remote.head,
+          url: remote.cname == null
+              ? value.website
+              : Uri.https(remote.cname!, '/'),
+          publishedAt: same ? previous.publishedAt : null,
+          pending: same && previous.pending,
+        ),
+      );
       message = '发布仓库已关联。';
+    } on ExistingBlogPublication catch (e) {
+      repositoryToReconnect = value;
+      _reconnectWorkspaceId = e.workspaceId;
+      message = '仓库已有发布记录，请确认是否是这个博客原先的仓库。';
+    } catch (e) {
+      _failure(e);
+    } finally {
+      busy = false;
+      _notify();
+    }
+  }
+
+  void _requireAuthorized(PublishTarget target) {
+    if (!repositories.any(
+      (r) => r.target.fullName.toLowerCase() == target.fullName.toLowerCase(),
+    )) {
+      throw const PublishingException('这个仓库尚未授权给 InkJian，请先授权仓库，再刷新。');
+    }
+  }
+
+  void cancelReconnection() {
+    repositoryToReconnect = null;
+    _reconnectWorkspaceId = null;
+    message = '重新关联已取消，原发布配置保留。';
+    _notify();
+  }
+
+  /// Called only after the user explicitly confirms the existing website.
+  Future<void> confirmReconnection() async {
+    final destination = repositoryToReconnect;
+    final identity = _reconnectWorkspaceId;
+    if (busy || state == null || destination == null || identity == null) {
+      return;
+    }
+    busy = true;
+    error = '';
+    _progress('正在重新关联原发布仓库…');
+    try {
+      repositories = await github.repositories();
+      _requireAuthorized(destination);
+      final remote = await github.reconnect(destination, identity);
+      if (remote.head == null) {
+        throw const PublishingException('仓库发布记录已变化，请重新选择仓库。');
+      }
+      await _save(
+        PublicationState(
+          workspaceId: identity,
+          target: destination,
+          commit: remote.head,
+          url: remote.cname == null
+              ? destination.website
+              : Uri.https(remote.cname!, '/'),
+        ),
+      );
+      repositoryToReconnect = null;
+      _reconnectWorkspaceId = null;
+      message = '原发布仓库已重新关联，可以发布更新。';
     } catch (e) {
       _failure(e);
     } finally {

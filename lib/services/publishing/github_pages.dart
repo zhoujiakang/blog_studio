@@ -6,9 +6,10 @@ import 'package:blog_studio/services/publishing/github_auth.dart';
 import 'package:blog_studio/services/publishing/github_transport.dart';
 
 class RemoteWebsite {
-  const RemoteWebsite(this.head, this.files);
+  const RemoteWebsite(this.head, this.files, {this.cname});
   final String? head;
   final Map<String, String> files;
+  final String? cname;
 }
 
 class GitHubPages {
@@ -135,6 +136,108 @@ class GitHubPages {
     if (expectedHead != null && head != expectedHead) {
       throw const PublishingException('发布仓库已被其他操作修改，应用未覆盖远程内容。请检查仓库后重试。');
     }
+    final files = await _filesAt(target, head);
+    final markerSha = files['.inkjian-site.json'];
+    if (markerSha == null) {
+      if (files.keys.any((name) => name != 'README.md')) {
+        throw const PublishingException(
+          '这个仓库已有其他内容。请选择空仓库或仅含 README 的新仓库，原有文件不会被覆盖。',
+        );
+      }
+    } else {
+      final blob = await _request(
+        'GET',
+        '${target.apiPath}/git/blobs/$markerSha',
+      );
+      if (blob['encoding'] != 'base64') {
+        throw const PublishingException('仓库发布标记无法识别。');
+      }
+      final marker = jsonDecode(
+        utf8.decode(
+          base64Decode((blob['content'] as String).replaceAll('\n', '')),
+        ),
+      );
+      if (marker['formatVersion'] != 1 ||
+          marker['workspaceId'] is! String ||
+          !RegExp(r'^[A-Za-z0-9_-]{1,128}$')
+              .hasMatch(marker['workspaceId'] as String)) {
+        throw const PublishingException('仓库发布标记无法识别。');
+      }
+      final managed = marker['files'];
+      if (managed is! List ||
+          files.keys.any(
+            (name) =>
+                name != '.inkjian-site.json' &&
+                name != 'CNAME' &&
+                !managed.contains(name),
+          )) {
+        throw const PublishingException('发布仓库中出现了其他文件，应用未覆盖它们。请检查仓库后重试。');
+      }
+      if (marker['workspaceId'] != workspaceId) {
+        throw ExistingBlogPublication(marker['workspaceId'] as String);
+      }
+    }
+    String? cname;
+    if (files.containsKey('CNAME')) {
+      final blob = await _request(
+        'GET',
+        '${target.apiPath}/git/blobs/${files['CNAME']}',
+      );
+      if (blob['encoding'] != 'base64') {
+        throw const PublishingException('仓库域名文件无法识别。');
+      }
+      final bytes = base64Decode(
+        (blob['content'] as String).replaceAll('\n', ''),
+      );
+      if (bytes.length > 256 || blobHash(bytes) != files['CNAME']) {
+        throw const PublishingException('仓库域名文件校验失败。');
+      }
+      cname = utf8.decode(bytes).trim().toLowerCase();
+      if (!_validDomain(cname)) {
+        throw const PublishingException('仓库域名文件格式无效，请检查 GitHub Pages 的自定义域名。');
+      }
+    }
+    return RemoteWebsite(head, files, cname: cname);
+  }
+
+  // Reconnection adopts domain-only edits. Ordinary publishing still requires
+  // an exact head match, and never adopts external website edits automatically.
+  Future<RemoteWebsite> reconnect(
+    PublishTarget target,
+    String workspaceId, {
+    String? expectedHead,
+  }) async {
+    final remote = await inspect(target, workspaceId);
+    if (expectedHead != null && remote.head != expectedHead) {
+      if (remote.head == null) {
+        throw const PublishingException('远程发布记录已被删除，请检查仓库后重新关联。');
+      }
+      final previous = await _filesAt(target, expectedHead);
+      final paths = {...previous.keys, ...remote.files.keys}..remove('CNAME');
+      if (paths.any((path) => previous[path] != remote.files[path])) {
+        throw const PublishingException('发布仓库的网页内容已被其他操作修改，应用未覆盖远程内容。');
+      }
+    }
+    return remote;
+  }
+
+  static bool _validDomain(String value) =>
+      value.length <= 253 &&
+      value.contains('.') &&
+      !RegExp(r'^\d+\.\d+\.\d+\.\d+$').hasMatch(value) &&
+      value
+          .split('.')
+          .every(
+            (label) =>
+                label.isNotEmpty &&
+                label.length <= 63 &&
+                RegExp(r'^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$').hasMatch(label),
+          );
+
+  Future<Map<String, String>> _filesAt(
+    PublishTarget target,
+    String head,
+  ) async {
     final commit = await _request('GET', '${target.apiPath}/git/commits/$head');
     final tree = await transport.request(
       'GET',
@@ -159,39 +262,7 @@ class GitHubPages {
       for (final entry in entries.where((e) => e['type'] == 'blob'))
         entry['path'] as String: entry['sha'] as String,
     };
-    final markerSha = files['.inkjian-site.json'];
-    if (markerSha == null) {
-      if (files.keys.any((name) => name != 'README.md')) {
-        throw const PublishingException(
-          '这个仓库已有其他内容。请选择空仓库或仅含 README 的新仓库，原有文件不会被覆盖。',
-        );
-      }
-    } else {
-      final blob = await _request(
-        'GET',
-        '${target.apiPath}/git/blobs/$markerSha',
-      );
-      if (blob['encoding'] != 'base64') {
-        throw const PublishingException('仓库发布标记无法识别。');
-      }
-      final marker = jsonDecode(
-        utf8.decode(
-          base64Decode((blob['content'] as String).replaceAll('\n', '')),
-        ),
-      );
-      if (marker['formatVersion'] != 1 ||
-          marker['workspaceId'] != workspaceId) {
-        throw const PublishingException('这个仓库属于另一个博客，请选择其他发布仓库。');
-      }
-      final managed = marker['files'];
-      if (managed is! List ||
-          files.keys.any(
-            (name) => name != '.inkjian-site.json' && !managed.contains(name),
-          )) {
-        throw const PublishingException('发布仓库中出现了其他文件，应用未覆盖它们。请检查仓库后重试。');
-      }
-    }
-    return RemoteWebsite(head, files);
+    return files;
   }
 
   static String blobHash(List<int> bytes) => sha1.convert([
@@ -236,14 +307,15 @@ class GitHubPages {
     final files = {
       ...input,
       '.nojekyll': <int>[],
-      '.inkjian-site.json': utf8.encode(
-        jsonEncode({
-          'formatVersion': 1,
-          'workspaceId': workspaceId,
-          'files': [...input.keys, '.nojekyll'],
-        }),
-      ),
+      if (remote.cname != null) 'CNAME': utf8.encode('${remote.cname}\n'),
     };
+    files['.inkjian-site.json'] = utf8.encode(
+      jsonEncode({
+        'formatVersion': 1,
+        'workspaceId': workspaceId,
+        'files': files.keys.toList(),
+      }),
+    );
     final tree = <Map<String, dynamic>>[];
     var uploaded = 0;
     for (final entry in files.entries) {
@@ -313,7 +385,13 @@ class GitHubPages {
       );
     }
     final url = Uri.tryParse(site['html_url'] as String? ?? '');
-    if (url == null || url.scheme != 'https' || url.host.isEmpty) {
+    if (url == null ||
+        (url.scheme != 'https' &&
+            !(url.scheme == 'http' &&
+                site['cname'] is String &&
+                _validDomain(site['cname'] as String) &&
+                url.host == site['cname'])) ||
+        url.host.isEmpty) {
       throw const PublishingException('GitHub 尚未返回网站地址，请稍后重试。');
     }
     return url;
