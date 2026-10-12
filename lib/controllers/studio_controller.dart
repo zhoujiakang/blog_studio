@@ -1,3 +1,4 @@
+import 'package:blog_studio/storage/last_project_store.dart';
 import 'package:blog_studio/models/trash_entry.dart';
 import 'package:blog_studio/controllers/publish_controller.dart';
 import 'package:blog_studio/platform/contracts/desktop_platform.dart';
@@ -23,12 +24,15 @@ class StudioController extends ChangeNotifier {
     required this.prompts,
     required this.dependencies,
     this.publisher,
-  }) {
+    this.lastProject,
+  }) : restoringProject = lastProject != null {
     session.addListener(_changed);
     preview.addListener(_changed);
     publisher?.addListener(_changed);
     session.editor.onPasteImage = () => unawaited(pasteImage());
   }
+  final LastProjectStore? lastProject;
+  bool restoringProject;
   final PublishController? publisher;
   final EditorSession session;
   final PreviewManager preview;
@@ -41,12 +45,14 @@ class StudioController extends ChangeNotifier {
 
   /// Navigation must not animate creation controls into a disabled state.
   bool get creationBlocked =>
+      restoringProject ||
       (session.busy && !_switchingSection) ||
       session.importing ||
       preparingPreview ||
       choosingProject ||
       ((publisher?.busy ?? false) && !_switchingSection);
   bool get _operationBlocked =>
+      restoringProject ||
       _switchingSection ||
       session.busy ||
       session.importing ||
@@ -192,6 +198,39 @@ class StudioController extends ChangeNotifier {
     super.dispose();
   }
 
+  Future<void> restoreLastProject() async {
+    if (!restoringProject || lastProject == null) return;
+    try {
+      if (session.project != null) return;
+      final root = await lastProject!.read();
+      if (root == null || !mounted) return;
+      final inspection = await session.projects.inspect(root);
+      if (!mounted) return;
+      if (inspection.kind != DirectoryKind.compatible) {
+        await lastProject!.remember(null);
+        return;
+      }
+      if (await session.openProject(root) && mounted) {
+        update(_resetLibraryView);
+      }
+      // Loading never creates a blog, downloads a template or starts preview.
+    } catch (_) {
+      // An unavailable folder or app preference must not prevent manual opening.
+    } finally {
+      update(() => restoringProject = false);
+    }
+  }
+
+  Future<void> _rememberProject() async {
+    final root = session.project?.root;
+    if (lastProject == null || root == null) return;
+    try {
+      await lastProject!.remember(root);
+    } catch (_) {
+      _message('博客已打开，但无法记住目录；下次启动需要重新选择。');
+    }
+  }
+
   Future<void> pickProject() async {
     if (_operationBlocked) return;
     final root = await dependencies.files.chooseBlogDirectory();
@@ -217,13 +256,16 @@ class StudioController extends ChangeNotifier {
         return;
       }
       await preview.stop();
-      await run(
-        session.openProject(
-          root,
-          initialize: initialize,
-          templateId: templateId,
-        ),
+      final opened = await session.openProject(
+        root,
+        initialize: initialize,
+        templateId: templateId,
       );
+      if (!opened) {
+        if (session.error != null) _message(session.error!);
+        return;
+      }
+      await _rememberProject();
       if (mounted) {
         update(_resetLibraryView);
       }

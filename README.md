@@ -229,6 +229,8 @@ flutter test integration_test/all_native_test.dart -d macos --dart-define="INKJI
 
 夹具不使用真实用户博客；原生测试需要可操作的 macOS 桌面。中文输入法、不同硬件和线上发布仍需实际验证。格式化使用 `dart format lib test integration_test tool`。
 
+启动时，应用会自动打开最后一次成功选择的博客。macOS 的目录记录位于应用支持目录 `~/Library/Application Support/InkJian/session.json`，不写入博客配置；目录不存在或不再是有效博客时回到选择页。自动恢复不会创建博客、下载模板、启动预览或发布网站。GitHub 授权另存于系统钥匙串。
+
 ## 源码、生成文件与提交范围
 
 提交应用与模板源码、品牌素材、必要说明、LICENSE、依赖声明、锁文件、测试和工具脚本。`doc/` 是本地模块说明，由 `.gitignore` 排除；仓库没有自动构建流程或 Prettier 配置。

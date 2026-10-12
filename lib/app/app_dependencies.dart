@@ -1,3 +1,5 @@
+import 'package:blog_studio/storage/last_project_store.dart';
+import 'package:blog_studio/platform/macos/last_project_store.dart';
 import 'package:blog_studio/platform/contracts/credential_store.dart';
 import 'package:blog_studio/platform/macos/credential_store.dart';
 
@@ -21,6 +23,7 @@ class AppDependencies {
     required this.runtime,
     required this.processes,
     required this.createEditorHost,
+    this.lastProject,
     this.drops = const NoFileDrops(),
     this.credentials = const UnavailableCredentialStore(),
   });
@@ -39,7 +42,9 @@ class AppDependencies {
     createEditorHost: MacEditorHost.new,
     drops: MacFileDrops(),
     credentials: const MacCredentialStore(),
+    lastProject: MacLastProjectStore(),
   );
+  final LastProjectStore? lastProject;
   final CredentialStore credentials;
   final FileDialogs files;
   final FileDrops drops;

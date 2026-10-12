@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:blog_studio/services/editor_session.dart';
 import 'package:blog_studio/models/article.dart';
 import 'package:blog_studio/models/project.dart';
-import 'package:blog_studio/main.dart';
+import 'package:blog_studio/app/app_dependencies.dart';
 import 'package:blog_studio/ui/pages/studio_home.dart';
 
 void main() {
@@ -24,7 +24,19 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(const StudioApp());
+      final base = AppDependencies.macos;
+      final dependencies = AppDependencies(
+        files: base.files,
+        clipboard: base.clipboard,
+        window: base.window,
+        browser: base.browser,
+        runtime: base.runtime,
+        processes: base.processes,
+        createEditorHost: base.createEditorHost,
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: StudioHome(dependencies: dependencies)),
+      );
       expect(find.text('选择目录'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());

@@ -67,6 +67,7 @@ class _StudioHomeState extends State<StudioHome> {
       preview: preview,
       prompts: FlutterInteractionPrompts(() => context, () => mounted, preview),
       dependencies: dependencies,
+      lastProject: widget.session == null ? dependencies.lastProject : null,
       publisher: PublishController(
         auth: GitHubAuth(store: dependencies.credentials),
         builder: BlogBuilder(preview),
@@ -76,6 +77,9 @@ class _StudioHomeState extends State<StudioHome> {
     );
     controller.addListener(_changed);
     dependencies.window.watchClose(_onClose);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(controller.restoreLastProject());
+    });
   }
 
   @override
@@ -102,7 +106,9 @@ class _StudioHomeState extends State<StudioHome> {
                 borderRadius: BorderRadius.circular(16),
                 child: Material(
                   color: Colors.white,
-                  child: session.project == null
+                  child: controller.restoringProject
+                      ? const Center(child: Text('正在打开上次的博客…'))
+                      : session.project == null
                       ? WelcomePage(controller: controller)
                       : session.article != null
                       ? WritingPage(controller: controller)
